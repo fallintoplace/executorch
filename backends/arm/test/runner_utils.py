@@ -208,20 +208,20 @@ def numpy_to_torch_tensor(array: np.ndarray, output_node: Node) -> torch.Tensor:
     output_tensor = get_first_fake_tensor(output_node)
     shape = output_tensor.shape
     dim_order = output_tensor.dim_order()
+    if output_tensor.dtype == torch.bfloat16 or array.dtype.type is np.void:
+        tensor = torch.frombuffer(array, dtype=output_tensor.dtype)
+    else:
+        tensor = torch.from_numpy(array)
+
     if dim_order == NHWC_ORDER:
         shape_with_dim_order = [shape[i] for i in NHWC_ORDER]
-        tensor = torch.from_numpy(array).reshape(shape_with_dim_order)
+        tensor = tensor.reshape(shape_with_dim_order)
         return tensor.permute(NHWC_INVERSE_ORDER).to(memory_format=torch.channels_last)
     elif dim_order == NNHWC_ORDER:
         shape_with_dim_order = [shape[i] for i in NNHWC_ORDER]
-        tensor = torch.from_numpy(array).reshape(shape_with_dim_order)
+        tensor = tensor.reshape(shape_with_dim_order)
         return tensor.permute(NNHWC_INVERSE_ORDER).to(memory_format=torch.channels_last)
     else:
-        if array.dtype.type is np.void:
-            # If dtype is void, "cheat" and use the output_tensor dtype.
-            tensor = torch.frombuffer(array, dtype=output_tensor.dtype)
-        else:
-            tensor = torch.from_numpy(array)
         return tensor.reshape(shape)
 
 
